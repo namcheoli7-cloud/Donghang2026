@@ -1,0 +1,1197 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>동행프로그램 조회 시스템</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --primary: #2A5AA8; --primary-lt: #DDE8F8; --primary-dk: #1E4590;
+    --danger: #B52A1C;  --danger-lt: #FDECEA;
+    --warn: #9A6200;    --warn-lt: #FEF3DC;
+    --ok: #1E6B3A;      --ok-lt: #D9F0E3;
+    --purple: #5A2E90;  --purple-lt: #EDE5FF;
+    --gray0: #F0F2F7; --gray1: #E0E4ED; --gray2: #B8BFCC;
+    --gray3: #6B7282; --gray4: #3A4052; --gray5: #0F1520;
+    --white: #FFFFFF;
+    --radius-sm: 6px; --radius-md: 10px; --radius-lg: 14px;
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+    background: #C9D4E8; color: var(--gray5);
+    font-size: 15px; line-height: 1.65;
+    max-width: 780px; margin: 0 auto; padding: 0 0 32px;
+  }
+  .app-header { background: var(--primary); color: #fff; padding: 18px 20px; }
+  .app-header h1 { font-size: 22px; font-weight: 800; letter-spacing: -.3px; }
+  .conn-status { font-size: 11px; opacity: .85; margin-top: 4px; }
+  .main-tabs { display: flex; background: var(--white); border-bottom: 2px solid var(--gray1); }
+  .main-tab {
+    flex: 1; padding: 14px 4px; text-align: center; min-width: 0;
+    font-size: 13px; font-weight: 700; color: var(--gray3);
+    border: none; background: transparent; cursor: pointer;
+    border-bottom: 3px solid transparent; margin-bottom: -2px;
+    transition: color .15s, border-color .15s; white-space: nowrap;
+  }
+  .main-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+  .body { padding: 14px; }
+  .panel { display: none; }
+  .panel.active { display: block; }
+  .card { background: var(--white); border: 1px solid var(--gray2); border-radius: var(--radius-lg); margin-bottom: 14px; overflow: hidden; }
+  .card-header { padding: 11px 16px; background: var(--gray0); border-bottom: 2px solid var(--gray1); font-size: 13px; font-weight: 800; color: var(--gray4); }
+  .card-body { padding: 16px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+  .form-row.single { grid-template-columns: 1fr; }
+  .field label { display: block; font-size: 12px; font-weight: 800; color: var(--gray4); margin-bottom: 5px; }
+  .field label .req { color: var(--danger); margin-left: 2px; }
+  .field input, .field select, .field textarea {
+    width: 100%; padding: 9px 11px;
+    border: 1.5px solid var(--gray2); border-radius: var(--radius-sm);
+    font-size: 14px; color: var(--gray5); outline: none; font-family: inherit;
+    background: var(--white);
+  }
+  .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(42,90,168,.15); }
+  .field textarea { resize: vertical; min-height: 90px; line-height: 1.65; }
+  .field .hint { font-size: 12px; color: var(--gray3); margin-top: 5px; }
+  .field .error-msg { font-size: 12px; color: var(--danger); margin-top: 5px; display: none; }
+  .field.has-error input, .field.has-error select, .field.has-error textarea { border-color: var(--danger); box-shadow: 0 0 0 3px rgba(181,42,28,.12); }
+  .field.has-error .error-msg { display: block; }
+  .dup-select { width: 100%; margin-top: 6px; padding: 9px 11px; border: 1.5px solid var(--warn); border-radius: var(--radius-sm); background: var(--warn-lt); font-size: 14px; color: var(--gray5); outline: none; font-family: inherit; display: none; }
+  .dup-select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(42,90,168,.15); }
+  .btn-main { width: 100%; padding: 13px; margin-top: 14px; background: var(--primary); color: #fff; border: none; border-radius: var(--radius-md); font-size: 15px; font-weight: 700; cursor: pointer; transition: background .15s; }
+  .btn-main:hover { background: var(--primary-dk); }
+  .btn-main:disabled { background: var(--gray2); color: var(--gray4); cursor: not-allowed; }
+  .btn-main.ok { background: var(--ok); }
+  .btn-main.ok:hover { background: #165A2E; }
+  .result-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .result-count { font-size: 13px; color: var(--gray4); font-weight: 700; }
+  .btn-refresh { padding: 7px 12px; border: 1.5px solid var(--gray2); border-radius: var(--radius-sm); background: var(--white); font-size: 13px; font-weight: 600; color: var(--gray4); cursor: pointer; }
+  .grade-section { margin-bottom: 16px; }
+  .grade-label { font-size: 13px; font-weight: 800; color: var(--gray4); margin-bottom: 8px; padding-left: 2px; }
+  .class-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+  .class-chip { padding: 7px 15px; border: 1.5px solid var(--gray2); border-radius: var(--radius-sm); font-size: 14px; font-weight: 700; color: var(--gray4); background: var(--white); cursor: pointer; transition: all .12s; }
+  .class-chip:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-lt); }
+  .class-chip.ac { background: var(--primary); border-color: var(--primary); color: #fff; }
+  .grade-chip { padding: 10px 24px; border: 1.5px solid var(--gray2); border-radius: var(--radius-sm); font-size: 15px; font-weight: 700; color: var(--gray4); background: var(--white); cursor: pointer; transition: all .12s; }
+  .grade-chip:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-lt); }
+  .grade-chip.ac { background: var(--primary); border-color: var(--primary); color: #fff; }
+  .summary-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .summary-table th { background: var(--gray0); padding: 9px 11px; text-align: left; font-size: 12px; font-weight: 800; color: var(--gray4); border-bottom: 2px solid var(--gray1); }
+  .summary-table th.center, .summary-table td.center { text-align: center; }
+  .summary-table td { padding: 10px 11px; border-bottom: 1px solid var(--gray1); vertical-align: middle; }
+  .summary-table tr:last-child td { border-bottom: none; }
+  .summary-table tr:hover td { background: var(--gray0); }
+  .s-name { font-weight: 700; color: var(--gray5); } .s-num { font-size: 12px; color: var(--gray3); }
+  .s-cnt { font-size: 16px; font-weight: 700; }
+  .s-cnt.c0{color:var(--gray3);} .s-cnt.c1{color:var(--ok);} .s-cnt.c3{color:var(--warn);} .s-cnt.c4{color:#C05A00;} .s-cnt.c5{color:var(--danger);} .s-cnt.c6{color:var(--purple);font-weight:900;}
+  .step-badge { display: inline-block; padding: 4px 11px; border-radius: 100px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+  .step-0{background:var(--gray1);color:var(--gray4);} .step-1{background:var(--ok-lt);color:var(--ok);} .step-3{background:var(--warn-lt);color:var(--warn);} .step-4{background:#FEE8CC;color:#C05A00;} .step-5{background:var(--danger-lt);color:var(--danger);} .step-6{background:var(--purple-lt);color:var(--purple);}
+  .btn-detail { padding: 6px 14px; border: 1.5px solid var(--gray2); border-radius: var(--radius-sm); background: var(--white); font-size: 13px; font-weight: 700; color: var(--gray4); cursor: pointer; white-space: nowrap; transition: all .12s; }
+  .btn-detail:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-lt); }
+  .toggle-group { display: flex; gap: 6px; }
+  .toggle-btn { flex: 1; padding: 10px 0; text-align: center; border: 1.5px solid var(--gray2); border-radius: var(--radius-sm); font-size: 14px; font-weight: 700; color: var(--gray4); background: var(--white); cursor: pointer; transition: all .12s; }
+  .toggle-btn:hover { border-color: var(--primary); color: var(--primary); }
+  .toggle-btn.ac { background: var(--primary); border-color: var(--primary); color: #fff; }
+  .toggle-btn.ac-danger { background: var(--danger); border-color: var(--danger); color: #fff; }
+  .teacher-row { display: flex; gap: 8px; align-items: flex-end; }
+  .teacher-row .field { flex: 1; margin: 0; }
+  .btn-save-teacher { padding: 0 14px; height: 40px; border: 1.5px solid var(--primary); border-radius: var(--radius-sm); background: var(--primary-lt); color: var(--primary-dk); font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; transition: all .12s; }
+  .btn-save-teacher:hover { background: var(--primary); color: #fff; }
+  .cum-auto-info { display: none; margin-top: 8px; padding: 10px 14px; background: var(--danger-lt); border: 1.5px solid #e8a89e; border-radius: var(--radius-sm); font-size: 14px; color: var(--danger); font-weight: 700; }
+  .modal-wrap { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--white); z-index: 500; overflow-y: auto; }
+  .modal-wrap.open { display: block; }
+  .modal-header { display: flex; align-items: center; gap: 12px; padding: 14px 18px; background: var(--primary); color: #fff; position: sticky; top: 0; z-index: 10; }
+  .modal-title { font-size: 14px; font-weight: 700; flex: 1; }
+  .modal-close { padding: 9px 20px; border: 2px solid rgba(255,255,255,.9); border-radius: var(--radius-sm); background: rgba(255,255,255,.2); color: #fff; font-size: 15px; font-weight: 700; cursor: pointer; transition: background .12s; white-space: nowrap; flex-shrink: 0; }
+  .modal-close:hover { background: rgba(255,255,255,.35); }
+  .modal-body { padding: 14px 18px 40px; }
+  .record-card { background: var(--white); border: 1px solid var(--gray1); border-radius: var(--radius-md); padding: 14px 16px; margin-bottom: 10px; }
+  .record-card.highlight { border-left: 4px solid var(--danger); background: #fff8f8; }
+  .rec-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 6px; margin-bottom: 9px; }
+  .rec-badges { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
+  .badge { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 100px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+  .badge-class{background:var(--primary-lt);color:var(--primary-dk);} .badge-cat{background:var(--warn-lt);color:var(--warn);} .badge-cat.sev{background:var(--danger-lt);color:var(--danger);} .badge-cum-yes{background:var(--danger-lt);color:var(--danger);} .badge-cum-no{background:var(--gray1);color:var(--gray4);}
+  .student-name { font-size: 16px; font-weight: 700; color: var(--gray5); }
+  .student-num { font-size: 13px; color: var(--gray3); }
+  .rec-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 9px; padding: 7px 12px; background: var(--gray0); border-radius: var(--radius-sm); }
+  .rec-meta-date { font-size: 14px; font-weight: 700; color: var(--gray5); } .rec-meta-sep { color: var(--gray2); } .rec-meta-period { font-size: 14px; font-weight: 600; color: var(--primary-dk); }
+  .rec-content { font-size: 15px; color: var(--gray5); line-height: 1.85; white-space: pre-wrap; word-break: break-all; border-left: 3px solid var(--primary); padding-left: 13px; margin-bottom: 9px; font-weight: 500; }
+  .rec-footer { display: flex; align-items: center; justify-content: flex-end; font-size: 13px; color: var(--gray3); }
+  .rec-teacher { font-weight: 700; color: var(--gray4); }
+  .pagination { display: flex; align-items: center; justify-content: center; gap: 4px; margin-top: 16px; flex-wrap: wrap; }
+  .pg-btn { min-width: 38px; height: 38px; padding: 0 8px; border: 1.5px solid var(--gray2); border-radius: var(--radius-sm); background: var(--white); font-size: 14px; font-weight: 600; color: var(--gray4); cursor: pointer; transition: all .12s; }
+  .pg-btn:hover { border-color: var(--primary); color: var(--primary); }
+  .pg-btn.ac { background: var(--primary); border-color: var(--primary); color: #fff; }
+  .pg-btn:disabled { opacity: .4; cursor: not-allowed; }
+  .pg-info { font-size: 13px; color: var(--gray3); padding: 0 6px; }
+  .state-msg { text-align: center; padding: 44px 16px; color: var(--gray3); font-size: 14px; }
+  .state-msg .ico { font-size: 36px; display: block; margin-bottom: 10px; }
+  .divider { border: none; border-top: 1.5px solid var(--gray1); margin: 16px 0; }
+  .btn-aux { flex: 1; padding: 11px 0; text-align: center; border: 1.5px solid var(--gray2); border-radius: var(--radius-sm); background: var(--white); font-size: 13px; font-weight: 700; color: var(--gray4); cursor: pointer; transition: all .12s; }
+  .btn-aux:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-lt); }
+  .edit-rec-card { background: var(--white); border: 1.5px solid var(--gray2); border-radius: var(--radius-md); padding: 13px 15px; margin-bottom: 9px; cursor: pointer; transition: border-color .12s, background .12s; }
+  .edit-rec-card:hover { border-color: var(--primary); background: var(--primary-lt); }
+  .filter-chip { padding: 6px 14px; border: 1.5px solid var(--gray2); border-radius: 100px; font-size: 13px; font-weight: 700; color: var(--gray4); background: var(--white); cursor: pointer; transition: all .12s; white-space: nowrap; }
+  .filter-chip:hover { border-color: var(--primary); color: var(--primary); }
+  .filter-chip.ac { background: var(--primary); border-color: var(--primary); color: #fff; }
+  .btn-edit-inline {
+    flex-shrink: 0; padding: 4px 8px;
+    border: 1.5px solid var(--gray2); border-radius: var(--radius-sm);
+    background: var(--white); font-size: 14px; cursor: pointer;
+    transition: all .12s; line-height: 1;
+  }
+  .btn-edit-inline:hover { border-color: var(--primary); background: var(--primary-lt); }
+  .toast { display: none; position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--gray5); color: #fff; padding: 12px 20px; border-radius: var(--radius-md); font-size: 13px; font-weight: 600; z-index: 1000; box-shadow: 0 4px 16px rgba(0,0,0,.2); white-space: nowrap; }
+  .toast.show { display: block; }
+  .toast.ok-toast { background: var(--ok); } .toast.err-toast { background: var(--danger); }
+  @media (max-width: 600px) {
+    .body { padding: 10px; }
+    .card-body { padding: 12px; }
+    .modal-body { padding: 10px 12px 40px; }
+    .main-tab { font-size: 12px; padding: 14px 2px; }
+    .form-row { grid-template-columns: 1fr; }
+    .field input, .field select, .field textarea { font-size: 16px; padding: 10px 12px; }
+    .field textarea { min-height: 100px; }
+    .dup-select { font-size: 16px; padding: 10px 12px; }
+    .btn-main { padding: 14px; font-size: 16px; }
+    .btn-aux  { padding: 13px 0; font-size: 14px; }
+    .btn-save-teacher { height: 44px; padding: 0 12px; }
+    .btn-refresh { padding: 8px 12px; font-size: 13px; }
+    .btn-detail { padding: 8px 14px; font-size: 14px; }
+    .pg-btn { min-width: 42px; height: 42px; font-size: 15px; }
+    .record-card { padding: 13px 12px; }
+    .rec-badges { gap: 5px; }
+    .badge { font-size: 12px; padding: 4px 10px; }
+    .student-name { font-size: 17px; }
+    .rec-content { font-size: 16px; padding-left: 11px; }
+    .rec-meta { flex-wrap: wrap; gap: 5px; }
+    .rec-meta-date, .rec-meta-period { font-size: 14px; }
+    .step-badge { font-size: 13px; padding: 5px 11px; }
+    .summary-table { font-size: 13px; }
+    .summary-table td, .summary-table th { padding: 9px 7px; }
+    .teacher-row { gap: 6px; }
+    .class-chip { padding: 9px 15px; font-size: 15px; }
+    .grade-chip { padding: 13px 22px; font-size: 16px; }
+    .edit-rec-card { padding: 13px 12px; }
+    .app-header h1 { font-size: 18px; }
+    .result-header { flex-wrap: wrap; gap: 6px; }
+    .filter-chip { font-size: 13px; padding: 7px 14px; }
+  }
+  @media print {
+    .app-header, .main-tabs, .card:has(#searchBtn), .result-header, .pagination, .toast, .modal-wrap { display: none !important; }
+    body { max-width: 100%; padding: 0; background: #fff; }
+    .panel { display: block !important; }
+    #panel-student { display: block !important; }
+    #panel-input, #panel-class, #panel-grd { display: none !important; }
+    .record-card { break-inside: avoid; border: 1px solid #ccc; margin-bottom: 10px; }
+    .rec-content { color: #000; border-left-color: #666; }
+    .print-hide-teacher .rec-footer { display: none !important; }
+    .studentFilterBar, #studentFilterBar { display: none !important; }
+    .btn-edit-inline { display: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app-header">
+  <h1>🤝 동행프로그램 조회 시스템</h1>
+  <div class="conn-status" id="connStatus">🔄 연결 중…</div>
+</div>
+
+<div class="main-tabs">
+  <button class="main-tab active" onclick="switchMain('input',  this)">✏️ 기록입력</button>
+  <button class="main-tab"        onclick="switchMain('grd',    this)">📋 학년별</button>
+  <button class="main-tab"        onclick="switchMain('student',this)">👤 학생별</button>
+  <button class="main-tab"        onclick="switchMain('class',  this)">🏫 학급별</button>
+</div>
+
+<div class="body">
+
+  <!-- 패널 A: 기록 입력 -->
+  <div class="panel active" id="panel-input">
+    <div class="card">
+      <div class="card-header">✏️ 생활지도 기록 입력</div>
+      <div class="card-body">
+        <div class="form-row">
+          <div class="field" id="field-inNum">
+            <label>학번 <span class="req">*</span></label>
+            <input type="text" id="inNum" placeholder="예) 10101" maxlength="5" inputmode="numeric" oninput="onNumInput()" onchange="onNumInput()">
+            <div class="hint">학번 또는 이름 중 하나만 입력해도 됩니다.</div>
+            <div class="error-msg">학번을 입력해 주세요.</div>
+          </div>
+          <div class="field" id="field-inName">
+            <label>이름 <span class="req">*</span></label>
+            <input type="text" id="inName" placeholder="홍길동" oninput="onNameInput()">
+            <select class="dup-select" id="dupSelect" onchange="onDupSelect(this.value)"><option value="">— 학번 선택 (동명이인) —</option></select>
+            <div class="error-msg">이름을 입력해 주세요.</div>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="field" id="field-inDate">
+            <label>날짜 <span class="req">*</span></label>
+            <input type="date" id="inDate" oninput="updateDateDay()" onchange="updateDateDay()">
+            <div class="hint" id="inDateDay"></div>
+            <div class="error-msg">날짜를 선택해 주세요.</div>
+          </div>
+          <div class="field" id="field-inPeriod">
+            <label>교시 <span class="req">*</span></label>
+            <select id="inPeriod">
+              <option value="">선택</option>
+              <option>조회전</option><option>조회</option><option>1교시</option><option>2교시</option><option>3교시</option><option>4교시</option><option>점심</option><option>5교시</option><option>6교시</option><option>7교시</option><option>종례</option><option>종례후</option><option>방과후</option><option>기타</option>
+            </select>
+            <div class="error-msg">교시를 선택해 주세요.</div>
+          </div>
+        </div>
+        <div class="field" id="field-inTeacher" style="margin-bottom:12px">
+          <label>담당교사 <span class="req">*</span></label>
+          <div class="teacher-row">
+            <div class="field" style="margin-bottom:0"><input type="text" id="inTeacher" placeholder="김선생"></div>
+            <button class="btn-save-teacher" onclick="saveTeacherName()">💾 저장</button>
+          </div>
+          <div class="hint" id="teacherHint"></div>
+          <div class="error-msg">담당교사를 입력해 주세요.</div>
+        </div>
+        <div class="field" id="field-inCategory" style="margin-bottom:12px">
+          <label>유형 <span class="req">*</span></label>
+          <select id="inCategory">
+            <option value="">선택</option>
+            <option>복장불량</option><option>수업준비 미흡</option><option>조회지각</option><option>분리지도</option><option>급식질서 위반</option><option>공공질서 위반</option><option>교육활동 침해</option><option>기타</option>
+          </select>
+          <div class="error-msg">유형을 선택해 주세요.</div>
+        </div>
+        <div class="field" id="field-inContent" style="margin-bottom:12px">
+          <label>내용 <span class="req">*</span></label>
+          <textarea id="inContent" placeholder="지도 내용을 입력하세요."></textarea>
+          <div class="error-msg">내용을 입력해 주세요.</div>
+        </div>
+        <hr class="divider">
+        <div class="field" style="margin-bottom:8px">
+          <label>동행 누적 여부</label>
+          <div class="toggle-group" id="cumToggle">
+            <button class="toggle-btn ac" onclick="setCum('NO',this)">누적 안 함</button>
+            <button class="toggle-btn"    onclick="setCum('YES',this)">누적 함</button>
+          </div>
+        </div>
+        <div class="cum-auto-info" id="cumAutoInfo"></div>
+        <button class="btn-main ok" id="submitBtn" onclick="doSubmit()">✅ 기록 저장</button>
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <button class="btn-aux" onclick="openEditModal()">🔧 기록 수정·삭제</button>
+          <button class="btn-aux" onclick="openNewStuModal()">🆕 전입생 추가</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 패널 B: 학생별 조회 -->
+  <div class="panel" id="panel-student">
+    <div class="card">
+      <div class="card-header">👤 학생별 조회</div>
+      <div class="card-body">
+        <div class="form-row">
+          <div class="field">
+            <label>학번</label>
+            <input type="text" id="searchNum" placeholder="예) 10101" maxlength="5" inputmode="numeric" oninput="onSearchNumInput()">
+            <div class="hint">학번 또는 이름 중 하나만 입력해도 됩니다.</div>
+          </div>
+          <div class="field">
+            <label>이름</label>
+            <input type="text" id="searchName" placeholder="홍길동" oninput="onSearchNameInput()">
+            <select class="dup-select" id="searchDupSelect" onchange="onSearchDupSelect(this.value)"><option value="">— 학번 선택 (동명이인) —</option></select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="field"><label>시작일</label><input type="date" id="dateFrom"></div>
+          <div class="field"><label>종료일</label><input type="date" id="dateTo"></div>
+        </div>
+        <button class="btn-main" id="searchBtn" onclick="doStudentSearch()" disabled>데이터 불러오는 중…</button>
+      </div>
+    </div>
+    <div class="result-header" id="studentResultHdr" style="display:none">
+      <span class="result-count" id="studentCount"></span>
+      <div style="display:flex;gap:6px;">
+        <button class="btn-refresh" onclick="doStudentSearch()">↻ 새로고침</button>
+        <button class="btn-refresh" onclick="openPrintModal()" style="background:var(--primary);color:#fff;border-color:var(--primary);">🖨️ 출력</button>
+      </div>
+    </div>
+    <div id="studentFilterBar" style="display:none;flex-wrap:wrap;gap:5px;margin-bottom:10px;"></div>
+    <div id="studentList"><div class="state-msg"><span class="ico">🔍</span>학번 또는 이름을 입력하고 조회하기를 누르세요.</div></div>
+    <div class="pagination" id="studentPagination"></div>
+  </div>
+
+  <!-- 패널 C: 학급별 조회 -->
+  <div class="panel" id="panel-class">
+    <div class="card">
+      <div class="card-header">🏫 학급 선택</div>
+      <div class="card-body">
+        <div class="grade-section"><div class="grade-label">1학년</div><div class="class-grid" id="grid1"></div></div>
+        <div class="grade-section"><div class="grade-label">2학년</div><div class="class-grid" id="grid2"></div></div>
+        <div class="grade-section"><div class="grade-label">3학년</div><div class="class-grid" id="grid3"></div></div>
+      </div>
+    </div>
+    <div id="classResult"><div class="state-msg"><span class="ico">🏫</span>학급을 선택하면 학생별 누적 현황이 표시됩니다.</div></div>
+  </div>
+
+  <!-- 패널 D: 학년별 조회 -->
+  <div class="panel" id="panel-grd">
+    <div class="card">
+      <div class="card-header">📋 학년 선택</div>
+      <div class="card-body">
+        <div style="display:flex;gap:10px;">
+          <button class="grade-chip" onclick="selectGrade('1',this)">1학년</button>
+          <button class="grade-chip" onclick="selectGrade('2',this)">2학년</button>
+          <button class="grade-chip" onclick="selectGrade('3',this)">3학년</button>
+        </div>
+      </div>
+    </div>
+    <div id="gradeResult"><div class="state-msg"><span class="ico">📋</span>학년을 선택하면 누적 기록이 시간순으로 표시됩니다.</div></div>
+    <div class="pagination" id="gradePagination"></div>
+  </div>
+
+</div>
+
+<!-- 기록 상세 모달 -->
+<div class="modal-wrap" id="modalWrap">
+  <div class="modal-header">
+    <button class="modal-close" id="modalCloseBtn">✕ 닫기</button>
+    <span class="modal-title" id="modalTitle">기록 상세</span>
+  </div>
+  <div class="modal-body">
+    <div id="modalFilterBar" style="display:none;flex-wrap:wrap;gap:5px;margin-bottom:12px;"></div>
+    <div id="modalBody"></div>
+  </div>
+</div>
+
+<!-- 기록 수정·삭제 모달 -->
+<div class="modal-wrap" id="editModal">
+  <div class="modal-header">
+    <button class="modal-close" onclick="closeEditModal()">✕ 닫기</button>
+    <span class="modal-title">🔧 기록 수정·삭제</span>
+  </div>
+  <div class="modal-body">
+    <div id="editListWrap">
+      <div class="hint" style="margin-bottom:10px;">수정하거나 삭제할 기록을 선택하세요.</div>
+      <div id="editList"></div>
+      <div class="pagination" id="editPagination"></div>
+    </div>
+    <div id="editFormWrap" style="display:none">
+      <button onclick="closeEditForm()" style="margin-bottom:12px;padding:6px 14px;border:1px solid var(--gray2);border-radius:var(--radius-sm);background:var(--white);font-size:12px;font-weight:700;color:var(--gray4);cursor:pointer;">← 목록으로</button>
+      <div class="card">
+        <div class="card-header" id="editFormTitle">기록 수정</div>
+        <div class="card-body">
+          <div class="form-row">
+            <div class="field"><label>학번</label><input type="text" id="editNum" readonly style="background:var(--gray0)"></div>
+            <div class="field"><label>이름</label><input type="text" id="editName"></div>
+          </div>
+          <div class="form-row">
+            <div class="field"><label>날짜</label><input type="date" id="editDate"></div>
+            <div class="field"><label>교시</label>
+              <select id="editPeriod">
+                <option value="">선택</option>
+                <option>조회전</option><option>조회</option><option>1교시</option><option>2교시</option><option>3교시</option><option>4교시</option><option>점심</option><option>5교시</option><option>6교시</option><option>7교시</option><option>종례</option><option>종례후</option><option>방과후</option><option>기타</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="field"><label>담당교사</label><input type="text" id="editTeacher"></div>
+            <div class="field"><label>유형</label>
+              <select id="editCategory">
+                <option value="">선택</option>
+                <option>복장불량</option><option>수업준비 미흡</option><option>조회지각</option><option>분리지도</option><option>급식질서 위반</option><option>공공질서 위반</option><option>교육활동 침해</option><option>기타</option>
+              </select>
+            </div>
+          </div>
+          <div class="field" style="margin-bottom:12px"><label>내용</label><textarea id="editContent"></textarea></div>
+          <div class="field" style="margin-bottom:8px">
+            <label>동행 누적 여부</label>
+            <div class="toggle-group" id="editCumToggle">
+              <button class="toggle-btn ac" onclick="setEditCum('NO',this)">누적 안 함</button>
+              <button class="toggle-btn"    onclick="setEditCum('YES',this)">누적 함</button>
+            </div>
+          </div>
+          <div class="form-row single" id="editCumCountRow" style="display:none">
+            <div class="field"><label>누적 횟수</label><input type="number" id="editCount" min="1" max="99"></div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:14px;">
+            <button class="btn-main ok" style="margin-top:0" onclick="doUpdateRecord()">💾 수정 저장</button>
+            <button class="btn-main" style="margin-top:0;background:var(--danger);" onclick="doDeleteRecord()">🗑️ 삭제</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 전입생 추가 모달 -->
+<div class="modal-wrap" id="newStuModal">
+  <div class="modal-header">
+    <button class="modal-close" onclick="closeNewStuModal()">✕ 닫기</button>
+    <span class="modal-title">🆕 전입생 추가</span>
+  </div>
+  <div class="modal-body">
+    <div class="hint" style="margin-bottom:12px;">students 노드에 학번/이름이 추가됩니다.</div>
+    <div class="form-row">
+      <div class="field" id="field-newNum">
+        <label>학번 <span class="req">*</span></label>
+        <input type="text" id="newNum" placeholder="예) 10101" maxlength="5" inputmode="numeric">
+        <div class="error-msg">5자리 학번을 입력해 주세요.</div>
+      </div>
+      <div class="field" id="field-newName">
+        <label>이름 <span class="req">*</span></label>
+        <input type="text" id="newName" placeholder="홍길동">
+        <div class="error-msg">이름을 입력해 주세요.</div>
+      </div>
+    </div>
+    <button class="btn-main ok" onclick="doAddStudent()">➕ 전입생 추가</button>
+  </div>
+</div>
+
+<!-- 출력 옵션 모달 -->
+<div class="modal-wrap" id="printModal">
+  <div class="modal-header">
+    <button class="modal-close" onclick="closePrintModal()">✕ 닫기</button>
+    <span class="modal-title">🖨️ 출력 옵션</span>
+  </div>
+  <div class="modal-body">
+    <div class="card">
+      <div class="card-header">유형 선택</div>
+      <div class="card-body">
+        <div class="hint" style="margin-bottom:10px;">출력할 유형을 선택하세요. 여러 개 선택 가능합니다.</div>
+        <div id="printCatList" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">출력 옵션</div>
+      <div class="card-body">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px;font-weight:600;color:var(--gray5);">
+          <input type="checkbox" id="printHideTeacher" style="width:18px;height:18px;cursor:pointer;">
+          담당교사 이름 숨기고 출력
+        </label>
+      </div>
+    </div>
+    <button class="btn-main ok" onclick="doPrint()">🖨️ 출력하기</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Firebase SDK (compat) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+
+<script>
+  // ═══════════════════════════════════════════
+  // Firebase 초기화
+  // ═══════════════════════════════════════════
+  var firebaseConfig = {
+    apiKey: "AIzaSyDzWep5KYrFkg-A9CwS6SSSS_-8dcjXxJY",
+    authDomain: "badminton-tournament-34f43.firebaseapp.com",
+    databaseURL: "https://badminton-tournament-34f43-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "badminton-tournament-34f43",
+    storageBucket: "badminton-tournament-34f43.firebasestorage.app",
+    messagingSenderId: "477061387177",
+    appId: "1:477061387177:web:37b811b6b644374e35aab8"
+  };
+  firebase.initializeApp(firebaseConfig);
+  var db   = firebase.database();
+  var auth = firebase.auth();
+
+  // ═══════════════════════════════════════════
+  // 전역 상태
+  // ═══════════════════════════════════════════
+  var allRecords    = [];
+  var nameMap       = {};
+  var dataLoaded    = false;
+  var filteredS     = [];
+  var filteredG     = [];
+  var currentPage   = 1;
+  var gradePage     = 1;
+  var editPage      = 1;
+  var editSorted    = [];
+  var studentCatFilter = '전체';
+  var modalCatFilter   = '전체';
+  var modalAllRecs     = [];
+  var modalStudentId   = '';
+  var modalStudentName = '';
+  var PAGE_SIZE     = 10;
+  var EDIT_PAGE_SIZE = 15;
+  var DANGER_CATS   = ['교육활동 침해', '분리지도'];
+  var CLASS_MAP     = { '1': 12, '2': 10, '3': 12 }; // config 로드 전 임시 기본값
+  var cumValue      = 'NO';
+  var resolvedNum   = '';
+  var searchResolvedNum = '';
+  var TEACHER_KEY   = 'donghang_teacher_name';
+  var editTarget    = null;
+  var editCumValue  = 'NO';
+  var lastStudentSearch = null;   // {num, name, dateFrom, dateTo}
+  var lastSelectedClass = null;   // {grade, cls}
+  var lastSelectedGrade = null;   // '1' | '2' | '3'
+
+  document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
+
+  function getStep(cnt) {
+    if(cnt===0) return{label:'기록 없음',cls:'step-0'};
+    if(cnt<=2)  return{label:'담임 지도 ('+cnt+'회)',cls:'step-1'};
+    if(cnt===3) return{label:'학년부 지도 (3회)',cls:'step-3'};
+    if(cnt===4) return{label:'학생부 지도 (4회)',cls:'step-4'};
+    if(cnt===5) return{label:'동행프로그램 (5회)',cls:'step-5'};
+    return{label:'생활교육위원회 ('+cnt+'회)',cls:'step-6'};
+  }
+  function cntColorCls(cnt){ if(cnt===0)return'c0';if(cnt<=2)return'c1';if(cnt===3)return'c3';if(cnt===4)return'c4';if(cnt===5)return'c5';return'c6'; }
+
+  // ═══════════════════════════════════════════
+  // 인증 → 데이터 로드
+  // ═══════════════════════════════════════════
+  auth.onAuthStateChanged(function(user){
+    if(user){
+      document.getElementById('connStatus').textContent = '🟢 연결됨';
+      initApp();
+    }
+  });
+  auth.signInAnonymously().catch(function(err){
+    console.error('인증 실패:', err);
+    document.getElementById('connStatus').textContent = '🔴 연결 실패';
+    showToast('❌ 접속에 실패했습니다. 새로고침 해주세요.','err');
+  });
+
+  function initApp(){
+    document.getElementById('dateTo').value = today();
+    document.getElementById('inDate').value = today();
+    updateDateDay();
+    loadSavedTeacher();
+
+    seedConfigIfNeeded()
+      .then(function(){ return loadConfigData(); })
+      .then(function(){
+        buildClassGrids();
+        return loadNameMapData();
+      })
+      .then(function(){
+        attachRecordsListener();
+      })
+      .catch(function(e){
+        console.error(e);
+        document.getElementById('studentList').innerHTML = '<div class="state-msg"><span class="ico">❌</span>데이터 로드 실패. 새로고침 해주세요.</div>';
+      });
+  }
+
+  function seedConfigIfNeeded(){
+    return db.ref('config/classMap').once('value').then(function(snap){
+      if(!snap.exists()){
+        return db.ref('config').set({
+          classMap: { '1': 12, '2': 10, '3': 12 },
+          categories: ['복장불량','수업준비 미흡','조회지각','분리지도','급식질서 위반','공공질서 위반','교육활동 침해','기타'],
+          periods: ['조회전','조회','1교시','2교시','3교시','4교시','점심','5교시','6교시','7교시','종례','종례후','방과후','기타']
+        });
+      }
+    });
+  }
+
+  function loadConfigData(){
+    return db.ref('config/classMap').once('value').then(function(snap){
+      var val = snap.val();
+      if(val) CLASS_MAP = val;
+    });
+  }
+
+  function loadNameMapData(){
+    return db.ref('students').once('value').then(function(snap){
+      var map = {};
+      snap.forEach(function(child){
+        var v = child.val();
+        if(v && v.name) map[child.key] = v.name;
+      });
+      nameMap = map;
+    });
+  }
+
+  // records는 실시간 리스너로 로드 - 다른 선생님이 입력해도 자동 반영됨
+  function attachRecordsListener(){
+    db.ref('records').on('value', function(snap){
+      var records = [];
+      snap.forEach(function(child){
+        var r = child.val() || {};
+        var sgh = (r.gradeClassNumber || '').toString().trim();
+        records.push({
+          firebaseKey:      child.key,
+          gradeClassNumber: sgh,
+          name:             r.name || nameMap[sgh] || '',
+          date:             r.date || '',
+          period:           r.period || '',
+          teacher:          r.teacher || '',
+          category:         r.category || '',
+          content:          r.content || '',
+          isCumulative:     r.isCumulative || 'NO',
+          count:            (r.count !== undefined && r.count !== null && r.count !== '') ? r.count.toString() : '',
+          className:        r.className || '',
+          grade:            r.grade || (sgh ? sgh.charAt(0) : '')
+        });
+      });
+      allRecords = records;
+
+      if(!dataLoaded){
+        dataLoaded = true;
+        var btn=document.getElementById('searchBtn');
+        btn.disabled=false; btn.textContent='조회하기';
+        triggerPendingInputs();
+      } else {
+        refreshCurrentView();
+      }
+    }, function(err){
+      console.error(err);
+      document.getElementById('connStatus').textContent = '🔴 연결 오류';
+      showToast('❌ 실시간 연결 오류','err');
+    });
+  }
+
+  // 데이터가 새로 들어왔을 때, 지금 보고 있는 화면을 조용히 다시 그림
+  function refreshCurrentView(){
+    var activeTab = document.querySelector('.main-tab.active');
+    if(!activeTab) return;
+    var panel = activeTab.textContent;
+
+    if(lastStudentSearch && document.getElementById('panel-student').classList.contains('active')){
+      doStudentSearch(true);
+    }
+    if(lastSelectedClass && document.getElementById('panel-class').classList.contains('active')){
+      var el = document.querySelector('.class-chip.ac');
+      if(el) selectClass(lastSelectedClass.grade, lastSelectedClass.cls, el);
+    }
+    if(lastSelectedGrade && document.getElementById('panel-grd').classList.contains('active')){
+      var gEl = document.querySelector('.grade-chip.ac');
+      if(gEl) renderGradePage(lastSelectedGrade);
+    }
+    if(document.getElementById('modalWrap').classList.contains('open') && modalStudentId){
+      var name = modalStudentName;
+      openModal(modalStudentId, name, true);
+    }
+  }
+
+  function today() { var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+
+  function switchMain(name, btn) {
+    document.querySelectorAll('.main-tab').forEach(function(b){ b.classList.remove('active'); });
+    document.querySelectorAll('.panel').forEach(function(p){ p.classList.remove('active'); });
+    btn.classList.add('active');
+    document.getElementById('panel-'+name).classList.add('active');
+  }
+
+  function buildClassGrids() {
+    ['1','2','3'].forEach(function(g) {
+      var html='';
+      var count = CLASS_MAP[g] || 0;
+      for(var c=1;c<=count;c++) html+='<button class="class-chip" onclick="selectClass(\''+g+'\',\''+c+'\',this)">'+c+'반</button>';
+      document.getElementById('grid'+g).innerHTML=html;
+    });
+  }
+
+  function triggerPendingInputs(){
+    var inName=document.getElementById('inName').value.trim();
+    if(inName) doNameLookup(inName,'dupSelect','inNum',function(n){ resolvedNum=n; if(cumValue==='YES') updateCumCount(); });
+    var inNum=document.getElementById('inNum').value.trim();
+    if(inNum.length===5 && !inName) fillNameByNum(inNum);
+    var sName=document.getElementById('searchName').value.trim();
+    if(sName) doNameLookup(sName,'searchDupSelect','searchNum',function(n){ searchResolvedNum=n; });
+    var sNum=document.getElementById('searchNum').value.trim();
+    if(sNum.length===5 && !sName) onSearchNumInput();
+  }
+
+  function loadSavedTeacher() {
+    try { var saved=localStorage.getItem(TEACHER_KEY); if(saved){ document.getElementById('inTeacher').value=saved; document.getElementById('teacherHint').textContent='저장된 이름: '+saved+' (수정 후 💾로 변경)'; } } catch(e){}
+  }
+  function saveTeacherName() {
+    var name=document.getElementById('inTeacher').value.trim();
+    if(!name){ showToast('⚠️ 이름을 입력해 주세요.','err'); return; }
+    try{ localStorage.setItem(TEACHER_KEY,name); document.getElementById('teacherHint').textContent='저장됨: '+name; showToast('✅ 담당교사 이름이 저장되었습니다.','ok'); } catch(e){ showToast('❌ 저장 실패','err'); }
+  }
+
+  function onNumInput() {
+    var num=document.getElementById('inNum').value.trim(); resolvedNum=num; hideDupSelect('dupSelect');
+    if(num.length===5){ fillNameByNum(num); }
+    else document.getElementById('inName').value='';
+    if(cumValue==='YES') updateCumCount();
+  }
+  function fillNameByNum(num){
+    if(nameMap[num]){ document.getElementById('inName').value=nameMap[num]; return; }
+    var found=allRecords.find(function(r){ return r.gradeClassNumber===num; });
+    if(found && found.name) document.getElementById('inName').value=found.name;
+  }
+  function onNameInput() {
+    var name=document.getElementById('inName').value.trim();
+    if(!name){ hideDupSelect('dupSelect'); resolvedNum=''; return; }
+    doNameLookup(name,'dupSelect','inNum',function(n){ resolvedNum=n; if(cumValue==='YES') updateCumCount(); });
+  }
+  function doNameLookup(name, selId, numInputId, onResolved) {
+    var nums=Object.keys(nameMap).filter(function(k){ return nameMap[k]===name; }).sort();
+    if(nums.length===0){ hideDupSelect(selId); if(onResolved) onResolved(''); }
+    else if(nums.length===1){ document.getElementById(numInputId).value=nums[0]; hideDupSelect(selId); if(onResolved) onResolved(nums[0]); }
+    else { var sel=document.getElementById(selId); sel.innerHTML='<option value="">— 학번 선택 (동명이인) —</option>'; nums.forEach(function(n){ sel.innerHTML+='<option value="'+n+'">'+n+'</option>'; }); sel.style.display='block'; document.getElementById(numInputId).value=''; if(onResolved) onResolved(''); }
+  }
+  function onDupSelect(val){ if(!val) return; resolvedNum=val; document.getElementById('inNum').value=val; if(cumValue==='YES') updateCumCount(); }
+  function hideDupSelect(id){ var sel=document.getElementById(id); sel.style.display='none'; sel.innerHTML='<option value="">— 학번 선택 (동명이인) —</option>'; }
+
+  function setCum(val, el) {
+    cumValue=val; document.querySelectorAll('#cumToggle .toggle-btn').forEach(function(b){ b.classList.remove('ac','ac-danger'); });
+    if(val==='YES'){ el.classList.add('ac-danger'); updateCumCount(); } else { el.classList.add('ac'); document.getElementById('cumAutoInfo').style.display='none'; }
+  }
+  function updateCumCount() {
+    var num=resolvedNum||document.getElementById('inNum').value.trim();
+    var info=document.getElementById('cumAutoInfo');
+    if(!num||!dataLoaded){ info.style.display='none'; return; }
+    var maxCum=0;
+    allRecords.forEach(function(r){ if(r.gradeClassNumber===num && r.isCumulative==='YES'){ var c=parseInt(r.count,10)||0; if(c>maxCum) maxCum=c; } });
+    var next=maxCum+1; info.style.display='block'; info.textContent='이번 건 누적 횟수: '+next+'회 (기존 '+maxCum+'회 → +1)'; info.dataset.next=next;
+  }
+  function getAutoCount(){ var info=document.getElementById('cumAutoInfo'); return info.dataset.next?parseInt(info.dataset.next,10):1; }
+
+  function onSearchNumInput() {
+    var num=document.getElementById('searchNum').value.trim(); searchResolvedNum=num; hideDupSelect('searchDupSelect');
+    if(num.length===5){ var name=nameMap[num]||''; if(!name){ var f=allRecords.find(function(r){ return r.gradeClassNumber===num; }); if(f) name=f.name||''; } if(name) document.getElementById('searchName').value=name; }
+  }
+  function onSearchNameInput() {
+    var name=document.getElementById('searchName').value.trim();
+    if(!name){ hideDupSelect('searchDupSelect'); searchResolvedNum=''; return; }
+    doNameLookup(name,'searchDupSelect','searchNum',function(n){ searchResolvedNum=n; });
+  }
+  function onSearchDupSelect(val){ if(!val) return; searchResolvedNum=val; document.getElementById('searchNum').value=val; }
+
+  function doStudentSearch(silent) {
+    if(!dataLoaded){ return; }
+    var numKw=searchResolvedNum||document.getElementById('searchNum').value.trim();
+    var nameKw=document.getElementById('searchName').value.trim();
+    var dateFrom=document.getElementById('dateFrom').value;
+    var dateTo=document.getElementById('dateTo').value;
+    if(!numKw && !nameKw){ if(!silent) showToast('⚠️ 학번 또는 이름을 입력해 주세요.','err'); return; }
+    lastStudentSearch = { num:numKw, name:nameKw, dateFrom:dateFrom, dateTo:dateTo };
+    filteredS=allRecords.filter(function(item){
+      if(numKw && item.gradeClassNumber!==numKw) return false;
+      if(!numKw && nameKw && item.name!==nameKw) return false;
+      if(dateFrom && item.date && item.date<dateFrom) return false;
+      if(dateTo   && item.date && item.date>dateTo)   return false;
+      return true;
+    });
+    filteredS.sort(sortDesc);
+    if(!silent) studentCatFilter='전체';
+    if(!silent) currentPage=1;
+    document.getElementById('studentResultHdr').style.display='flex'; document.getElementById('studentCount').textContent='기록 '+filteredS.length+'건';
+    renderStudentFilterBar();
+    renderStudentPage();
+  }
+  function renderStudentFilterBar(){
+    var bar=document.getElementById('studentFilterBar');
+    var cats=['전체'].concat(getUniqCats(filteredS));
+    if(cats.length<=2){ bar.style.display='none'; return; }
+    var countMap={};
+    filteredS.forEach(function(r){ countMap[r.category]=(countMap[r.category]||0)+1; });
+    var total=filteredS.length;
+    bar.style.display='flex';
+    bar.innerHTML=cats.map(function(c){
+      var cnt = c==='전체' ? total : (countMap[c]||0);
+      return '<button class="filter-chip'+(c===studentCatFilter?' ac':'')+'" onclick="setStudentCatFilter(\''+esc(c)+'\')">'+esc(c)+' <span style="opacity:.75;font-weight:600">('+cnt+')</span></button>';
+    }).join('');
+  }
+  function setStudentCatFilter(cat){
+    studentCatFilter=cat; currentPage=1;
+    renderStudentFilterBar(); renderStudentPage();
+  }
+  var PERIOD_ORDER = ['조회전','조회','1','2','3','4','점심','5','6','7','종례','종례후','방과후','기타'];
+  function periodIdx(p){
+    if(!p) return 99;
+    var key = p.replace(/\s*\(.*\)/,'').trim().replace(/교시$/,'').trim();
+    var i = PERIOD_ORDER.indexOf(key);
+    return i === -1 ? 99 : i;
+  }
+  function sortDesc(a, b){
+    var da=new Date(a.date||0), db2=new Date(b.date||0);
+    if(db2-da !== 0) return db2-da;
+    return periodIdx(b.period)-periodIdx(a.period);
+  }
+
+  function getUniqCats(recs){
+    var seen={}; var cats=[];
+    recs.forEach(function(r){ if(r.category && !seen[r.category]){ seen[r.category]=true; cats.push(r.category); } });
+    return cats.sort();
+  }
+
+  function renderStudentPage() {
+    var items = studentCatFilter==='전체' ? filteredS : filteredS.filter(function(r){ return r.category===studentCatFilter; });
+    if(!items.length){ document.getElementById('studentList').innerHTML='<div class="state-msg"><span class="ico">📭</span>'+(studentCatFilter==='전체'?'해당 학생의 기록이 없습니다.':'선택한 유형의 기록이 없습니다.')+'</div>'; document.getElementById('studentPagination').innerHTML=''; return; }
+    var totalPages=Math.ceil(items.length/PAGE_SIZE);
+    if(currentPage>totalPages) currentPage=1;
+    var pageItems=items.slice((currentPage-1)*PAGE_SIZE,currentPage*PAGE_SIZE);
+    document.getElementById('studentList').innerHTML=pageItems.map(recordCard).join('');
+    document.getElementById('studentPagination').innerHTML=buildPagination(currentPage,totalPages,'goStudentPage');
+  }
+  function goStudentPage(p){ var total=Math.ceil(filteredS.length/PAGE_SIZE); if(p<1||p>total) return; currentPage=p; renderStudentPage(); window.scrollTo(0,0); }
+
+  function selectClass(grade,cls,el){
+    document.querySelectorAll('.class-chip').forEach(function(c){ c.classList.remove('ac'); }); el.classList.add('ac');
+    lastSelectedClass = { grade:grade, cls:cls };
+    if(!dataLoaded){ document.getElementById('classResult').innerHTML='<div class="state-msg"><span class="ico">⏳</span>데이터 로딩 중…</div>'; return; }
+    var prefix=grade+(cls.length===1?'0':'')+cls; var classLabel=grade+'학년 '+cls+'반';
+    var classRecs=allRecords.filter(function(item){ return item.gradeClassNumber.substring(0,3)===prefix; });
+    if(!classRecs.length){ document.getElementById('classResult').innerHTML='<div class="state-msg"><span class="ico">📭</span>'+classLabel+' 기록이 없습니다.</div>'; return; }
+    var studentMap={};
+    classRecs.forEach(function(item){ var id=item.gradeClassNumber; if(!studentMap[id]) studentMap[id]={name:item.name,cumCount:0}; if(item.isCumulative==='YES'){ var c=parseInt(item.count,10)||0; if(c>studentMap[id].cumCount) studentMap[id].cumCount=c; } });
+    var students=Object.keys(studentMap).sort().map(function(id){ return{id:id,name:studentMap[id].name,cumCount:studentMap[id].cumCount}; });
+    var rows=students.map(function(s){ var step=getStep(s.cumCount); var ccls=cntColorCls(s.cumCount); return '<tr><td><span class="s-name">'+esc(s.name)+'</span><br><span class="s-num">'+esc(s.id)+'</span></td><td class="center"><span class="s-cnt '+ccls+'">'+(s.cumCount||'—')+'</span></td><td class="center"><span class="step-badge '+step.cls+'">'+step.label+'</span></td><td class="center"><button class="btn-detail" onclick="openModal(\''+esc(s.id)+'\',\''+esc(s.name)+'\')">기록 보기</button></td></tr>'; }).join('');
+    var recentRecs=classRecs.slice().sort(sortDesc);
+    document.getElementById('classResult').innerHTML=
+      '<div class="card"><div class="card-header">📋 '+classLabel+' 누적 현황 ('+students.length+'명)</div><div style="overflow-x:auto"><table class="summary-table"><thead><tr><th>학생</th><th class="center">누적</th><th class="center">단계</th><th class="center">상세</th></tr></thead><tbody>'+rows+'</tbody></table></div></div>'+
+      '<div class="card"><div class="card-header">📝 '+classLabel+' 전체 기록 ('+recentRecs.length+'건 · 최신순)</div><div style="padding:10px 14px">'+recentRecs.map(recordCard).join('')+'</div></div>';
+  }
+
+  function selectGrade(grade,el){
+    document.querySelectorAll('.grade-chip').forEach(function(c){ c.classList.remove('ac'); }); el.classList.add('ac');
+    lastSelectedGrade = grade;
+    if(!dataLoaded){ document.getElementById('gradeResult').innerHTML='<div class="state-msg"><span class="ico">⏳</span>데이터 로딩 중…</div>'; return; }
+    filteredG=allRecords.filter(function(item){ return item.grade===grade && item.isCumulative==='YES'; });
+    filteredG.sort(sortDesc);
+    gradePage=1; renderGradePage(grade);
+  }
+  function renderGradePage(grade){
+    var label=(grade||'?')+'학년';
+    if(!filteredG.length){ document.getElementById('gradeResult').innerHTML='<div class="state-msg"><span class="ico">📭</span>'+label+' 누적 기록이 없습니다.</div>'; document.getElementById('gradePagination').innerHTML=''; return; }
+    var totalPages=Math.ceil(filteredG.length/PAGE_SIZE);
+    var items=filteredG.slice((gradePage-1)*PAGE_SIZE,gradePage*PAGE_SIZE);
+    document.getElementById('gradeResult').innerHTML='<div class="result-header"><span class="result-count">'+label+' 누적 기록 '+filteredG.length+'건</span></div>'+items.map(recordCard).join('');
+    document.getElementById('gradePagination').innerHTML=buildPagination(gradePage,totalPages,'goGradePage');
+  }
+  function goGradePage(p){ var total=Math.ceil(filteredG.length/PAGE_SIZE); if(p<1||p>total) return; gradePage=p; renderGradePage(lastSelectedGrade); }
+
+  function openModal(id,name,silent){
+    modalStudentId = id; modalStudentName = name;
+    modalAllRecs=allRecords.filter(function(item){ return item.gradeClassNumber===id; });
+    modalAllRecs.sort(sortDesc);
+    if(!silent) modalCatFilter='전체';
+    document.getElementById('modalTitle').textContent=name+' ('+id+')  기록 '+modalAllRecs.length+'건';
+    renderModalFilterBar();
+    renderModalBody();
+    document.getElementById('modalWrap').classList.add('open');
+    if(!silent) document.getElementById('modalWrap').scrollTop=0;
+  }
+  function renderModalFilterBar(){
+    var bar=document.getElementById('modalFilterBar');
+    var cats=['전체'].concat(getUniqCats(modalAllRecs));
+    if(cats.length<=2){ bar.style.display='none'; return; }
+    bar.style.display='flex';
+    bar.innerHTML=cats.map(function(c){
+      return '<button class="filter-chip'+(c===modalCatFilter?' ac':'')+'" onclick="setModalCatFilter(\''+esc(c)+'\')">'+esc(c)+'</button>';
+    }).join('');
+  }
+  function setModalCatFilter(cat){
+    modalCatFilter=cat; renderModalFilterBar(); renderModalBody();
+    document.getElementById('modalWrap').scrollTop=0;
+  }
+  function renderModalBody(){
+    var recs=modalCatFilter==='전체' ? modalAllRecs : modalAllRecs.filter(function(r){ return r.category===modalCatFilter; });
+    document.getElementById('modalBody').innerHTML=recs.length
+      ?recs.map(recordCard).join('')
+      :'<div class="state-msg"><span class="ico">📭</span>해당 유형의 기록이 없습니다.</div>';
+  }
+  function closeModal(){ document.getElementById('modalWrap').classList.remove('open'); modalStudentId=''; modalStudentName=''; }
+
+  /* ═══ 기록 수정·삭제 모달 ═══ */
+  function openEditModal(){
+    editSorted=allRecords.slice().sort(sortDesc);
+    editPage=1; renderEditList();
+    document.getElementById('editListWrap').style.display='block';
+    document.getElementById('editFormWrap').style.display='none';
+    document.getElementById('editModal').classList.add('open');
+    document.getElementById('editModal').scrollTop=0;
+  }
+  function closeEditModal(){ document.getElementById('editModal').classList.remove('open'); editTarget=null; }
+
+  function renderEditList(){
+    var el=document.getElementById('editList');
+    if(!dataLoaded){ el.innerHTML='<div class="state-msg"><span class="ico">⏳</span>데이터 로딩 중…</div>'; return; }
+    if(!editSorted.length){ el.innerHTML='<div class="state-msg"><span class="ico">📭</span>기록이 없습니다.</div>'; document.getElementById('editPagination').innerHTML=''; return; }
+    var totalPages=Math.ceil(editSorted.length/EDIT_PAGE_SIZE);
+    var start=(editPage-1)*EDIT_PAGE_SIZE;
+    var items=editSorted.slice(start, start+EDIT_PAGE_SIZE);
+    items.forEach(function(item,i){ window['_er_'+(start+i)]=item; });
+    el.innerHTML=items.map(function(item,i){
+      var idx=start+i; var isCum=item.isCumulative==='YES'; var sev=DANGER_CATS.indexOf(item.category)>=0;
+      return '<div class="edit-rec-card'+(isCum?' highlight':'')+'" onclick="openEditForm(window[\'_er_'+idx+'\'])">'+
+        '<div class="rec-badges" style="margin-bottom:5px">'+
+          '<span class="badge badge-class">'+esc(item.grade+'학년 '+item.className)+'</span> '+
+          '<span class="badge badge-cat'+(sev?' sev':'')+'">'+esc(item.category)+'</span> '+
+          '<span class="student-name" style="font-size:13px;margin-left:4px">'+esc(item.name)+'</span> '+
+          '<span class="student-num">('+esc(item.gradeClassNumber)+')</span>'+
+        '</div>'+
+        '<div style="font-size:12px;color:var(--gray4);margin-bottom:4px">📅 '+esc(formatDateWithDay(item.date))+' · ⏰ '+esc(item.period)+'</div>'+
+        '<div style="font-size:13px;color:var(--gray5);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+esc(item.content)+'</div>'+
+      '</div>';
+    }).join('');
+    document.getElementById('editPagination').innerHTML=buildPagination(editPage,totalPages,'goEditPage');
+  }
+  function goEditPage(p){ var total=Math.ceil(editSorted.length/EDIT_PAGE_SIZE); if(p<1||p>total) return; editPage=p; renderEditList(); document.getElementById('editModal').scrollTop=0; }
+
+  function openEditForm(item){
+    editTarget=item;
+    document.getElementById('editFormTitle').textContent=item.name+' ('+item.gradeClassNumber+') 기록 수정';
+    document.getElementById('editNum').value=item.gradeClassNumber;
+    document.getElementById('editName').value=item.name;
+    document.getElementById('editDate').value=item.date;
+    document.getElementById('editPeriod').value=item.period;
+    document.getElementById('editTeacher').value=item.teacher;
+    document.getElementById('editCategory').value=item.category;
+    document.getElementById('editContent').value=item.content;
+    editCumValue=(item.isCumulative==='YES')?'YES':'NO';
+    document.querySelectorAll('#editCumToggle .toggle-btn').forEach(function(b){ b.classList.remove('ac','ac-danger'); });
+    if(editCumValue==='YES'){ document.querySelectorAll('#editCumToggle .toggle-btn')[1].classList.add('ac-danger'); document.getElementById('editCumCountRow').style.display='block'; document.getElementById('editCount').value=item.count||''; }
+    else { document.querySelectorAll('#editCumToggle .toggle-btn')[0].classList.add('ac'); document.getElementById('editCumCountRow').style.display='none'; }
+    document.getElementById('editListWrap').style.display='none';
+    document.getElementById('editFormWrap').style.display='block';
+    document.getElementById('editModal').scrollTop=0;
+  }
+  function closeEditForm(){ document.getElementById('editFormWrap').style.display='none'; document.getElementById('editListWrap').style.display='block'; renderEditList(); document.getElementById('editModal').scrollTop=0; editTarget=null; }
+  function setEditCum(val,el){ editCumValue=val; document.querySelectorAll('#editCumToggle .toggle-btn').forEach(function(b){ b.classList.remove('ac','ac-danger'); }); if(val==='YES'){ el.classList.add('ac-danger'); document.getElementById('editCumCountRow').style.display='block'; } else { el.classList.add('ac'); document.getElementById('editCumCountRow').style.display='none'; } }
+
+  // ═══════════════════════════════════════════
+  // Firebase 데이터 함수 (기존 GAS 함수 대응)
+  // ═══════════════════════════════════════════
+  function saveRecordFB(payload, callback){
+    var sgh = (payload.gradeClassNumber || '').toString().trim();
+    if(!sgh || sgh.length !== 5){ callback({ success:false, message:'학번이 올바르지 않습니다 (5자리).' }); return; }
+    var grade = sgh.charAt(0);
+    var classNum = parseInt(sgh.substring(1,3), 10);
+    var className = (!isNaN(classNum) && classNum > 0) ? classNum + '반' : '미지정';
+
+    var newRecord = {
+      gradeClassNumber: sgh,
+      name:         payload.name || '',
+      date:         payload.date || '',
+      period:       payload.period || '',
+      teacher:      payload.teacher || '',
+      category:     payload.category || '',
+      content:      payload.content || '',
+      isCumulative: payload.isCumulative || 'NO',
+      count:        payload.isCumulative === 'YES' ? (payload.count || '') : '',
+      grade:        grade,
+      className:    className,
+      createdAt:    firebase.database.ServerValue.TIMESTAMP,
+      synced:       false
+    };
+    db.ref('records').push(newRecord)
+      .then(function(){ callback({ success:true }); })
+      .catch(function(e){ callback({ success:false, message:e.message }); });
+  }
+
+  function updateRecordFB(payload, callback){
+    if(!payload.firebaseKey){ callback({ success:false, message:'잘못된 기록 정보입니다.' }); return; }
+    var updates = {
+      gradeClassNumber: payload.gradeClassNumber || '',
+      name:         payload.name || '',
+      date:         payload.date || '',
+      period:       payload.period || '',
+      teacher:      payload.teacher || '',
+      category:     payload.category || '',
+      content:      payload.content || '',
+      isCumulative: payload.isCumulative || 'NO',
+      count:        payload.isCumulative === 'YES' ? (payload.count || '') : ''
+    };
+    db.ref('records/'+payload.firebaseKey).update(updates)
+      .then(function(){ callback({ success:true }); })
+      .catch(function(e){ callback({ success:false, message:e.message }); });
+  }
+
+  function deleteRecordFB(payload, callback){
+    if(!payload.firebaseKey){ callback({ success:false, message:'잘못된 기록 정보입니다.' }); return; }
+    db.ref('records/'+payload.firebaseKey).remove()
+      .then(function(){ callback({ success:true }); })
+      .catch(function(e){ callback({ success:false, message:e.message }); });
+  }
+
+  function addStudentFB(payload, callback){
+    var num = (payload.gradeClassNumber || '').toString().trim();
+    var name = (payload.name || '').toString().trim();
+    if(!num || num.length !== 5){ callback({ success:false, message:'학번이 올바르지 않습니다 (5자리).' }); return; }
+    if(!name){ callback({ success:false, message:'이름을 입력해 주세요.' }); return; }
+    db.ref('students/'+num).once('value').then(function(snap){
+      if(snap.exists()){ callback({ success:false, message:'이미 존재하는 학번입니다: '+num }); return; }
+      db.ref('students/'+num).set({ name:name })
+        .then(function(){ callback({ success:true }); })
+        .catch(function(e){ callback({ success:false, message:e.message }); });
+    });
+  }
+
+  function doUpdateRecord(){
+    if(!editTarget){ showToast('⚠️ 수정할 기록을 선택해 주세요.','err'); return; }
+    var payload={
+      firebaseKey: editTarget.firebaseKey,
+      gradeClassNumber: editTarget.gradeClassNumber,
+      name: document.getElementById('editName').value.trim(),
+      date: document.getElementById('editDate').value,
+      period: document.getElementById('editPeriod').value,
+      teacher: document.getElementById('editTeacher').value.trim(),
+      category: document.getElementById('editCategory').value,
+      content: document.getElementById('editContent').value.trim(),
+      isCumulative: editCumValue,
+      count: editCumValue==='YES' ? document.getElementById('editCount').value.trim() : ''
+    };
+    updateRecordFB(payload, function(r){
+      if(r.success){ showToast('✅ 수정되었습니다.','ok'); closeEditForm(); }
+      else showToast('❌ 수정 실패: '+(r.message||'오류'),'err');
+    });
+  }
+  function doDeleteRecord(){
+    if(!editTarget){ showToast('⚠️ 삭제할 기록을 선택해 주세요.','err'); return; }
+    if(!confirm(editTarget.name+'('+editTarget.date+') 기록을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.')) return;
+    deleteRecordFB({ firebaseKey: editTarget.firebaseKey }, function(r){
+      if(r.success){
+        showToast('✅ 삭제되었습니다.','ok'); closeEditForm();
+        setTimeout(function(){ editSorted=allRecords.slice().sort(sortDesc); renderEditList(); },600);
+      } else showToast('❌ 삭제 실패: '+(r.message||'오류'),'err');
+    });
+  }
+
+  function openNewStuModal(){ document.getElementById('newStuModal').classList.add('open'); document.getElementById('newStuModal').scrollTop=0; }
+  function closeNewStuModal(){ document.getElementById('newStuModal').classList.remove('open'); }
+  function doAddStudent(){
+    var num=document.getElementById('newNum').value.trim(); var name=document.getElementById('newName').value.trim(); var ok=true;
+    if(!num||num.length!==5){ document.getElementById('field-newNum').classList.add('has-error'); ok=false; } else document.getElementById('field-newNum').classList.remove('has-error');
+    if(!name){ document.getElementById('field-newName').classList.add('has-error'); ok=false; } else document.getElementById('field-newName').classList.remove('has-error');
+    if(!ok){ showToast('⚠️ 학번과 이름을 확인해 주세요.','err'); return; }
+    addStudentFB({ gradeClassNumber:num, name:name }, function(r){
+      if(r.success){
+        showToast('✅ '+name+' ('+num+') 추가 완료','ok');
+        document.getElementById('newNum').value=''; document.getElementById('newName').value='';
+        loadNameMapData();
+      } else showToast('❌ 추가 실패: '+(r.message||'오류'),'err');
+    });
+  }
+
+  function validateInput(){
+    var ok=true;
+    function chk(fieldId,inputId){ var val=document.getElementById(inputId).value.trim(); if(!val){ document.getElementById(fieldId).classList.add('has-error'); ok=false; } else document.getElementById(fieldId).classList.remove('has-error'); }
+    var num=resolvedNum||document.getElementById('inNum').value.trim();
+    if(!num){ document.getElementById('field-inNum').classList.add('has-error'); ok=false; } else document.getElementById('field-inNum').classList.remove('has-error');
+    chk('field-inName','inName'); chk('field-inDate','inDate'); chk('field-inPeriod','inPeriod'); chk('field-inTeacher','inTeacher'); chk('field-inCategory','inCategory'); chk('field-inContent','inContent');
+    return ok;
+  }
+  function doSubmit(){
+    if(!validateInput()){ showToast('⚠️ 필수 항목을 모두 입력해 주세요.','err'); return; }
+    var num=resolvedNum||document.getElementById('inNum').value.trim();
+    var countVal=cumValue==='YES'?getAutoCount().toString():'';
+    var btn=document.getElementById('submitBtn'); btn.disabled=true; btn.textContent='저장 중…';
+    var payload={ gradeClassNumber:num, name:document.getElementById('inName').value.trim(), date:document.getElementById('inDate').value, period:document.getElementById('inPeriod').value, teacher:document.getElementById('inTeacher').value.trim(), category:document.getElementById('inCategory').value, content:document.getElementById('inContent').value.trim(), isCumulative:cumValue, count:countVal };
+    saveRecordFB(payload, function(result){
+      btn.disabled=false; btn.textContent='✅ 기록 저장';
+      if(result.success){ showToast('✅ 기록이 저장되었습니다.','ok'); resetInputForm(); }
+      else showToast('❌ 저장 실패: '+(result.message||'오류'),'err');
+    });
+  }
+  function resetInputForm(){
+    ['inNum','inName','inContent'].forEach(function(id){ document.getElementById(id).value=''; });
+    document.getElementById('inDate').value=today(); document.getElementById('inPeriod').value=''; document.getElementById('inCategory').value='';
+    resolvedNum=''; hideDupSelect('dupSelect'); cumValue='NO';
+    document.querySelectorAll('#cumToggle .toggle-btn').forEach(function(b){ b.classList.remove('ac','ac-danger'); });
+    document.querySelector('#cumToggle .toggle-btn').classList.add('ac');
+    document.getElementById('cumAutoInfo').style.display='none';
+    ['field-inNum','field-inName','field-inDate','field-inPeriod','field-inTeacher','field-inCategory','field-inContent'].forEach(function(id){ var el=document.getElementById(id); if(el) el.classList.remove('has-error'); });
+  }
+
+  function recordCard(item){
+    var isCum=item.isCumulative==='YES'; var sev=DANGER_CATS.indexOf(item.category)>=0; var classLabel=item.grade+'학년 '+item.className;
+    var cumBadge=isCum?'<span class="badge badge-cum-yes">동행 누적'+(item.count?' · '+item.count+'회':'')+'</span>':'<span class="badge badge-cum-no">누적 안 함</span>';
+    var key='_rc_'+item.firebaseKey;
+    window[key]=item;
+    return [
+      '<div class="record-card'+(isCum?' highlight':'')+'">',
+        '<div class="rec-top">',
+          '<div class="rec-badges">',
+            '<span class="badge badge-class">'+esc(classLabel)+'</span>',
+            '<span class="badge badge-cat'+(sev?' sev':'')+'">'+esc(item.category)+'</span>',
+            cumBadge,
+            '<span class="student-name">'+esc(item.name)+'</span>',
+            '<span class="student-num">('+esc(item.gradeClassNumber)+')</span>',
+          '</div>',
+          '<button class="btn-edit-inline" onclick="openEditFromCard(window[\''+key+'\'])" title="수정">✏️</button>',
+        '</div>',
+        '<div class="rec-meta">',
+          '<span class="rec-meta-date">📅 '+esc(formatDateWithDay(item.date))+'</span>',
+          '<span class="rec-meta-sep">|</span>',
+          '<span class="rec-meta-period">⏰ '+esc(item.period)+'</span>',
+        '</div>',
+        '<div class="rec-content">'+esc(item.content)+'</div>',
+        '<div class="rec-footer"><span class="rec-teacher">👤 '+esc(item.teacher)+'</span></div>',
+      '</div>'
+    ].join('');
+  }
+
+  function openEditFromCard(item){
+    editSorted = allRecords.slice().sort(sortDesc);
+    editPage = 1;
+    document.getElementById('editListWrap').style.display='none';
+    document.getElementById('editFormWrap').style.display='block';
+    document.getElementById('editModal').classList.add('open');
+    document.getElementById('editModal').scrollTop=0;
+    openEditForm(item);
+  }
+
+  function buildPagination(cur,total,fn){
+    if(total<=1) return '';
+    var html='<button class="pg-btn" onclick="'+fn+'('+(cur-1)+')" '+(cur===1?'disabled':'')+'>‹</button>';
+    pageRange(cur,total).forEach(function(p){ if(p==='...') html+='<span class="pg-info">…</span>'; else html+='<button class="pg-btn'+(p===cur?' ac':'')+'" onclick="'+fn+'('+p+')">'+p+'</button>'; });
+    html+='<button class="pg-btn" onclick="'+fn+'('+(cur+1)+')" '+(cur===total?'disabled':'')+'>›</button>';
+    html+='<span class="pg-info">'+cur+' / '+total+'</span>';
+    return html;
+  }
+  function pageRange(cur,total){ if(total<=7){ var a=[]; for(var i=1;i<=total;i++) a.push(i); return a; } var pages=[1]; if(cur>3) pages.push('...'); for(var i=Math.max(2,cur-1);i<=Math.min(total-1,cur+1);i++) pages.push(i); if(cur<total-2) pages.push('...'); pages.push(total); return pages; }
+
+  function showToast(msg,type){ var t=document.getElementById('toast'); t.textContent=msg; t.className='toast show '+(type==='ok'?'ok-toast':type==='err'?'err-toast':''); setTimeout(function(){ t.classList.remove('show'); },2800); }
+  function esc(s){ if(!s) return ''; return s.toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function formatDateWithDay(dateStr){ if(!dateStr) return ''; var d=new Date(dateStr); if(isNaN(d.getTime())) return dateStr; return dateStr+' ('+['일','월','화','수','목','금','토'][d.getDay()]+')'; }
+  function updateDateDay(){ var val=document.getElementById('inDate').value; var el=document.getElementById('inDateDay'); if(val){ var d=new Date(val); el.textContent=['일','월','화','수','목','금','토'][d.getDay()]+'요일'; } else el.textContent=''; }
+  function openPrintModal(){
+    if(!filteredS.length){ showToast('⚠️ 먼저 학생을 조회해 주세요.','err'); return; }
+    var cats=getUniqCats(filteredS);
+    var listEl=document.getElementById('printCatList');
+    listEl.innerHTML='<button class="filter-chip ac" id="pcat-전체" onclick="togglePrintCat(\'전체\')">전체</button>'+
+      cats.map(function(c){ return '<button class="filter-chip ac" id="pcat-'+esc(c)+'" onclick="togglePrintCat(\''+esc(c)+'\')">'+esc(c)+'</button>'; }).join('');
+    document.getElementById('printHideTeacher').checked=false;
+    document.getElementById('printModal').classList.add('open');
+    document.getElementById('printModal').scrollTop=0;
+  }
+  function closePrintModal(){ document.getElementById('printModal').classList.remove('open'); }
+
+  function togglePrintCat(cat){
+    if(cat==='전체'){
+      document.querySelectorAll('#printCatList .filter-chip').forEach(function(b){ b.classList.add('ac'); });
+      return;
+    }
+    var btn=document.getElementById('pcat-'+cat);
+    if(btn) btn.classList.toggle('ac');
+    var allBtns=document.querySelectorAll('#printCatList .filter-chip:not(#pcat-전체)');
+    var allOn=true;
+    allBtns.forEach(function(b){ if(!b.classList.contains('ac')) allOn=false; });
+    var totalBtn=document.getElementById('pcat-전체');
+    if(totalBtn){ if(allOn) totalBtn.classList.add('ac'); else totalBtn.classList.remove('ac'); }
+  }
+
+  function doPrint(){
+    var selectedCats=[];
+    document.querySelectorAll('#printCatList .filter-chip:not(#pcat-전체)').forEach(function(b){
+      if(b.classList.contains('ac')) selectedCats.push(b.textContent);
+    });
+    var hideTeacher=document.getElementById('printHideTeacher').checked;
+    closePrintModal();
+
+    var printRecs=filteredS.filter(function(r){
+      return selectedCats.length===0 || selectedCats.indexOf(r.category)>=0;
+    });
+    if(!printRecs.length){ showToast('⚠️ 선택한 유형의 기록이 없습니다.','err'); return; }
+
+    var printArea=document.getElementById('studentList');
+    var original=printArea.innerHTML;
+    printArea.innerHTML=printRecs.map(recordCard).join('');
+    if(hideTeacher) printArea.classList.add('print-hide-teacher');
+    window.print();
+    printArea.innerHTML=original;
+    printArea.classList.remove('print-hide-teacher');
+  }
+</script>
+</body>
+</html>
